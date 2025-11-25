@@ -1,529 +1,344 @@
-// import React, { useState } from 'react';
-// const API_BASE = 'http://localhost:8087';
+// import { useState } from "react";
+// import { toast } from "react-toastify";
+
+// import {
+//   useAddLaptopMutation,
+//   useUploadLaptopPhotoMutation,
+// } from "../store/services/laptopApi";
 
 // export default function SellLaptopForm() {
-//   const initialForm = {
-//     serialNumber: '',
-//     dealer: '',
-//     model: '',
-//     brand: '',
-//     price: '',
+//   const [addLaptop, { isLoading: addLoading }] = useAddLaptopMutation();
+//   const [uploadPhoto, { isLoading: photoLoading }] =
+//     useUploadLaptopPhotoMutation();
+
+//   // Get sellerId from login
+//   const sellerId = Number(localStorage.getItem("sellerId"));
+
+//   const [formData, setFormData] = useState({
+//     serialNumber: "",
+//     dealer: "",
+//     model: "",
+//     brand: "",
+//     price: "",
 //     warrantyInYear: 1,
-//     processor: '',
-//     processorBrand: '',
-//     memoryType: '',
-//     screenSize: '',
-//     colour: '',
-//     ram: '',
-//     storage: '',
-//     battery: '',
-//     batteryLife: '',
-//     graphicsCard: '',
-//     graphicBrand: '',
-//     weight: '',           // keep as string until submission
-//     manufacturer: '',
-//     usbPorts: 2,
-//     status: 'ACTIVE',
-//     sellerId: 1,
+//     processor: "",
+//     processorBrand: "",
+//     memoryType: "",
+//     screenSize: "",
+//     colour: "",
+//     ram: "",
+//     storage: "",
+//     battery: "",
+//     batteryLife: "",
+//     graphicsCard: "",
+//     graphicBrand: "",
+//     weight: "",
+//     manufacturer: "",
+//     usbPorts: "",
+//     status: "ACTIVE",
+//   });
+
+//   const [photoFile, setPhotoFile] = useState(null);
+//   const [createdLaptopId, setCreatedLaptopId] = useState(null);
+
+//   const handleChange = (e) => {
+//     setFormData({ ...formData, [e.target.name]: e.target.value });
 //   };
 
-//   const [form, setForm] = useState(initialForm);
-//   const [submitting, setSubmitting] = useState(false);
-//   const [message, setMessage] = useState('');
-//   const [error, setError] = useState('');
-
-//   const handleChange = (field, value) => {
-//     if (field === 'weight') {
-//       // keep as string for validation later
-//       setForm(prev => ({
-//         ...prev,
-//         [field]: value,
-//       }));
-//     } else if (
-//       field === 'price' ||
-//       field === 'warrantyInYear' ||
-//       field === 'usbPorts' ||
-//       field === 'sellerId'
-//     ) {
-//       setForm(prev => ({
-//         ...prev,
-//         [field]: Number(value || 0),
-//       }));
-//     } else {
-//       setForm(prev => ({
-//         ...prev,
-//         [field]: value,
-//       }));
-//     }
-//   };
-
-//   const handleSubmit = async e => {
+//   const handleLaptopSubmit = async (e) => {
 //     e.preventDefault();
-//     setSubmitting(true);
-//     setMessage('');
-//     setError('');
 
-//     // serial number validation: letters, digits, hyphens only
-//     const serialRegex = /^[A-Za-z0-9\-]+$/;
-//     if (!serialRegex.test(form.serialNumber)) {
-//       setError("Serial Number may contain only letters, digits or hyphens");
-//       setSubmitting(false);
+//     if (!sellerId) {
+//       toast.error("Seller ID missing. Please login again.");
 //       return;
 //     }
-
-//     // weight validation
-//     const weightNum = Number(form.weight);
-//     console.log("weight is ",weightNum);
-//     if (form.weight === '' || isNaN(weightNum) || weightNum <= 0) {
-//       setError("Weight must be a number greater than zero");
-//       setSubmitting(false);
-//       return;
-//     }
-
-//     // build payload
-//     const payload = {
-//       ...form,
-//       price: Number(form.price || 0),
-//       weight: weightNum,
-//     };
 
 //     try {
-//       const res = await fetch(`${API_BASE}/api/laptops/create`, {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify(payload),
-//       });
-//       const data = await res.json().catch(() => ({}));
-//       if (!res.ok) {
-//         throw new Error(data?.message || 'Failed to add laptop');
-//       }
-//       setMessage(data?.message || 'Laptop added successfully');
-//       setForm(initialForm);  // reset form to initial state
+//       const payload = {
+//         ...formData,
+//         price: Number(formData.price),
+//         usbPorts: Number(formData.usbPorts),
+//         warrantyInYear: Number(formData.warrantyInYear),
+
+//         // Backend expects sellerId, not seller object
+//         sellerId: sellerId,
+//       };
+
+//       console.log("PAYLOAD SENT:", payload);
+
+//       const res = await addLaptop(payload).unwrap();
+
+//       toast.success(res.message || "Laptop created successfully!");
+
+//       const newId =
+//         res?.data?.id ||
+//         res?.id ||
+//         res?.laptopId ||
+//         res?.message?.match(/id (\d+)/)?.[1];
+
+//       setCreatedLaptopId(newId);
+//     } catch (error) {
+//       console.error(error);
+//       toast.error("Failed to add laptop");
+//     }
+//   };
+
+//   const handlePhotoUpload = async () => {
+//     if (!photoFile) return toast.error("Select a photo first");
+//     if (!createdLaptopId) return toast.error("Create laptop first");
+
+//     const form = new FormData();
+//     form.append("files", photoFile);
+//     form.append("laptopId", createdLaptopId); // backend expects laptopId
+
+//     try {
+//       const res = await uploadPhoto({
+//         body: form,
+//       }).unwrap();
+
+//       toast.success(res.message || "Photo uploaded!");
 //     } catch (err) {
-//       setError(err.message || 'Something went wrong');
-//     } finally {
-//       setSubmitting(false);
+//       console.error(err);
+//       toast.error("Photo upload failed");
 //     }
 //   };
 
 //   return (
-//     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-//       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//         <Input
-//           label="Serial Number"
-//           value={form.serialNumber}
-//           onChange={e => handleChange('serialNumber', e.target.value)}
-//           required
-//         />
-//         <Input
-//           label="Dealer"
-//           value={form.dealer}
-//           onChange={e => handleChange('dealer', e.target.value)}
-//           required
-//         />
-//         <Input
-//           label="Model"
-//           value={form.model}
-//           onChange={e => handleChange('model', e.target.value)}
-//           required
-//         />
-//         <Input
-//           label="Brand"
-//           value={form.brand}
-//           onChange={e => handleChange('brand', e.target.value)}
-//           required
-//         />
-//         <Input
-//           label="Price (₹)"
-//           type="number"
-//           value={form.price}
-//           onChange={e => handleChange('price', e.target.value)}
-//           required
-//         />
-//         <Input
-//           label="Warranty (Years)"
-//           type="number"
-//           value={form.warrantyInYear}
-//           onChange={e => handleChange('warrantyInYear', e.target.value)}
-//         />
-//       </div>
+//     <div className="w-full max-w-3xl mx-auto p-6">
+//       <h1 className="text-3xl font-bold mb-6">Add Laptop</h1>
 
-//       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//         <Input
-//           label="Processor"
-//           value={form.processor}
-//           onChange={e => handleChange('processor', e.target.value)}
-//         />
-//         <Input
-//           label="Processor Brand"
-//           value={form.processorBrand}
-//           onChange={e => handleChange('processorBrand', e.target.value)}
-//         />
-//         <Input
-//           label="Memory Type"
-//           value={form.memoryType}
-//           onChange={e => handleChange('memoryType', e.target.value)}
-//         />
-//         <Input
-//           label="Screen Size"
-//           value={form.screenSize}
-//           onChange={e => handleChange('screenSize', e.target.value)}
-//         />
-//         <Input
-//           label="Colour"
-//           value={form.colour}
-//           onChange={e => handleChange('colour', e.target.value)}
-//         />
-//         <Input
-//           label="RAM"
-//           value={form.ram}
-//           onChange={e => handleChange('ram', e.target.value)}
-//         />
-//         <Input
-//           label="Storage"
-//           value={form.storage}
-//           onChange={e => handleChange('storage', e.target.value)}
-//         />
-//       </div>
+//       <form
+//         onSubmit={handleLaptopSubmit}
+//         className="grid grid-cols-1 md:grid-cols-2 gap-4"
+//       >
+//         {Object.keys(formData).map((key) =>
+//           key !== "status" ? (
+//             <div key={key} className="flex flex-col">
+//               <label className="font-semibold mb-1 capitalize">{key}</label>
+//               <input
+//                 type="text"
+//                 name={key}
+//                 value={formData[key]}
+//                 onChange={handleChange}
+//                 className="border p-2 rounded"
+//               />
+//             </div>
+//           ) : null
+//         )}
 
-//       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//         <Input
-//           label="Battery"
-//           value={form.battery}
-//           onChange={e => handleChange('battery', e.target.value)}
-//         />
-//         <Input
-//           label="Battery Life"
-//           value={form.batteryLife}
-//           onChange={e => handleChange('batteryLife', e.target.value)}
-//         />
-//         <Input
-//           label="Graphics Card"
-//           value={form.graphicsCard}
-//           onChange={e => handleChange('graphicsCard', e.target.value)}
-//         />
-//         <Input
-//           label="Graphic Brand"
-//           value={form.graphicBrand}
-//           onChange={e => handleChange('graphicBrand', e.target.value)}
-//         />
-//         <Input
-//           label="Weight"
-//           type="number"
-//           min="0.01"
-//           step="0.01"
-//           value={form.weight}
-//           onChange={e => handleChange('weight', e.target.value)}
-//           placeholder="Enter weight (kg)"
-//           required
-//         />
-//         <Input
-//           label="Manufacturer"
-//           value={form.manufacturer}
-//           onChange={e => handleChange('manufacturer', e.target.value)}
-//         />
-//         <Input
-//           label="USB Ports"
-//           type="number"
-//           value={form.usbPorts}
-//           onChange={e => handleChange('usbPorts', e.target.value)}
-//         />
-//         <div>
-//           <label className="block mb-1 font-medium text-sm">Status</label>
-//           <select
-//             value={form.status}
-//             onChange={e => handleChange('status', e.target.value)}
-//             className="w-full border rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//           >
-//             <option value="ACTIVE">ACTIVE</option>
-//             <option value="DELETED">DELETED</option>
-//           </select>
-//         </div>
-//       </div>
-
-//       <div className="flex gap-3 items-center">
 //         <button
 //           type="submit"
-//           disabled={submitting}
-//           className="px-6 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 disabled:opacity-50"
+//           disabled={addLoading}
+//           className="col-span-2 bg-blue-600 text-white py-3 rounded mt-4"
 //         >
-//           {submitting ? 'Submitting…' : 'Add Laptop'}
+//           {addLoading ? "Creating..." : "Create Laptop"}
 //         </button>
-//         {message && <p className="text-sm text-green-600">{message}</p>}
-//         {error && <p className="text-sm text-red-600">{error}</p>}
-//       </div>
-//     </form>
-//   );
-// }
+//       </form>
 
-// function Input({ label, type = 'text', ...props }) {
-//   return (
-//     <div>
-//       <label className="block mb-1 font-medium text-sm">{label}</label>
-//       <input
-//         type={type}
-//         {...props}
-//         className="w-full border rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//       />
+//       {createdLaptopId && (
+//         <div className="mt-10 border-t pt-6">
+//           <h2 className="text-xl font-bold mb-4">
+//             Upload Laptop Photo (ID: {createdLaptopId})
+//           </h2>
+
+//           <input
+//             type="file"
+//             onChange={(e) => setPhotoFile(e.target.files[0])}
+//             className="mb-4"
+//           />
+
+//           <button
+//             onClick={handlePhotoUpload}
+//             disabled={photoLoading}
+//             className="bg-green-600 text-white py-2 px-6 rounded"
+//           >
+//             {photoLoading ? "Uploading..." : "Upload Photo"}
+//           </button>
+//         </div>
+//       )}
 //     </div>
 //   );
 // }
+import { useState } from "react";
+import { toast } from "react-toastify";
 
-
-
-
-import React, { useState } from 'react';
-import { useAddLaptopMutation } from '../store/services/sellerApi';
+import {
+  useAddLaptopMutation,
+  useUploadLaptopPhotoMutation,
+} from "../store/services/laptopApi";
 
 export default function SellLaptopForm() {
-  const initialForm = {
-    serialNumber: '',
-    dealer: '',
-    model: '',
-    brand: '',
-    price: '',
+  const [addLaptop, { isLoading: addLoading }] = useAddLaptopMutation();
+  const [uploadPhoto, { isLoading: photoLoading }] =
+    useUploadLaptopPhotoMutation();
+
+  // Get seller ID from login
+  const sellerId = Number(localStorage.getItem("sellerId"));
+
+  const [formData, setFormData] = useState({
+    serialNumber: "",
+    dealer: "",
+    model: "",
+    brand: "",
+    price: "",
     warrantyInYear: 1,
-    processor: '',
-    processorBrand: '',
-    memoryType: '',
-    screenSize: '',
-    colour: '',
-    ram: '',
-    storage: '',
-    battery: '',
-    batteryLife: '',
-    graphicsCard: '',
-    graphicBrand: '',
-    manufacturer: '',
-    usbPorts: 2,
-    status: 'ACTIVE',
-    sellerId: 1,
-    weight: '',  // added weight field as string initially
+    processor: "",
+    processorBrand: "",
+    memoryType: "",
+    screenSize: "",
+    colour: "",
+    ram: "",
+    storage: "",
+    battery: "",
+    batteryLife: "",
+    graphicsCard: "",
+    graphicBrand: "",
+    weight: "",
+    manufacturer: "",
+    usbPorts: "",
+    status: "ACTIVE",
+  });
+
+  const [photoFiles, setPhotoFiles] = useState([]);
+  const [createdLaptopId, setCreatedLaptopId] = useState(null);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const [form, setForm] = useState(initialForm);
-  const [addLaptop, { isLoading }] = useAddLaptopMutation();
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-
-  const handleChange = (field, value) => {
-    if (
-      field === 'price' ||
-      field === 'warrantyInYear' ||
-      field === 'usbPorts' ||
-      field === 'sellerId'
-    ) {
-      setForm(prev => ({
-        ...prev,
-        [field]: Number(value || 0),
-      }));
-    } else {
-      setForm(prev => ({
-        ...prev,
-        [field]: value,
-      }));
-    }
-  };
-
-  const handleSubmit = async e => {
+  // ============================
+  //   ADD LAPTOP
+  // ============================
+  const handleLaptopSubmit = async (e) => {
     e.preventDefault();
-    setMessage('');
-    setError('');
 
-    // serial number validation
-    const serialRegex = /^[A-Za-z0-9\-]+$/;
-    if (!serialRegex.test(form.serialNumber)) {
-      setError("Serial Number may contain only letters, digits or hyphens");
-      setSubmitting(false);
+    if (!sellerId) {
+      toast.error("Seller ID missing. Please login again.");
       return;
     }
-
-    // weight validation: convert and ensure > 0
-    const weightNum = Number(form.weight);
-    if (form.weight === '' || isNaN(weightNum) || weightNum <= 0) {
-      setError("Weight must be a number greater than zero");
-      setSubmitting(false);
-      return;
-    }
-
-    const payload = {
-      ...form,
-      price: Number(form.price || 0),
-      weight: weightNum,
-    };
 
     try {
-      const data = await addLaptop(payload).unwrap();
-      setMessage(data?.message || 'Laptop added successfully');
-      setForm(initialForm);
+      const payload = {
+        ...formData,
+        price: Number(formData.price),
+        usbPorts: Number(formData.usbPorts),
+        warrantyInYear: Number(formData.warrantyInYear),
+        sellerId: sellerId, // backend expects sellerId
+      };
+
+      console.log("PAYLOAD SENT:", payload);
+
+      const res = await addLaptop(payload).unwrap();
+      toast.success(res.message || "Laptop created successfully!");
+
+      const newId =
+        res?.data?.id ||
+        res?.id ||
+        res?.laptopId ||
+        res?.message?.match(/id (\d+)/)?.[1];
+
+      setCreatedLaptopId(newId);
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.data?.message || "Failed to add laptop");
+    }
+  };
+
+  // ============================
+  //   MULTIPLE PHOTO UPLOAD
+  // ============================
+  const handlePhotoUpload = async () => {
+    if (photoFiles.length === 0)
+      return toast.error("Select at least one photo");
+
+    if (!createdLaptopId) return toast.error("Create laptop first");
+
+    try {
+      for (let file of photoFiles) {
+        const form = new FormData();
+        form.append("files", file);
+        form.append("laptopId", createdLaptopId);
+
+        await uploadPhoto({ body: form }).unwrap();
+      }
+
+      toast.success("All photos uploaded successfully!");
     } catch (err) {
-      const apiMessage = err?.data?.message || err?.message || 'Something went wrong';
-      setError(apiMessage);
+      console.error(err);
+      toast.error("Photo upload failed");
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Serial Number"
-          value={form.serialNumber}
-          onChange={e => handleChange('serialNumber', e.target.value)}
-          required
-        />
-        <Input
-          label="Dealer"
-          value={form.dealer}
-          onChange={e => handleChange('dealer', e.target.value)}
-          required
-        />
-        <Input
-          label="Model"
-          value={form.model}
-          onChange={e => handleChange('model', e.target.value)}
-          required
-        />
-        <Input
-          label="Brand"
-          value={form.brand}
-          onChange={e => handleChange('brand', e.target.value)}
-          required
-        />
-        <Input
-          label="Price (₹)"
-          type="number"
-          value={form.price}
-          onChange={e => handleChange('price', e.target.value)}
-          required
-        />
-        <Input
-          label="Warranty (Years)"
-          type="number"
-          value={form.warrantyInYear}
-          onChange={e => handleChange('warrantyInYear', e.target.value)}
-        />
-      </div>
+    <div className="w-full max-w-3xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Add Laptop</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Processor"
-          value={form.processor}
-          onChange={e => handleChange('processor', e.target.value)}
-        />
-        <Input
-          label="Processor Brand"
-          value={form.processorBrand}
-          onChange={e => handleChange('processorBrand', e.target.value)}
-        />
-        <Input
-          label="Memory Type"
-          value={form.memoryType}
-          onChange={e => handleChange('memoryType', e.target.value)}
-        />
-        <Input
-          label="Screen Size"
-          value={form.screenSize}
-          onChange={e => handleChange('screenSize', e.target.value)}
-        />
-        <Input
-          label="Colour"
-          value={form.colour}
-          onChange={e => handleChange('colour', e.target.value)}
-        />
-        <Input
-          label="RAM"
-          value={form.ram}
-          onChange={e => handleChange('ram', e.target.value)}
-        />
-        <Input
-          label="Storage"
-          value={form.storage}
-          onChange={e => handleChange('storage', e.target.value)}
-        />
-      </div>
+      {/* ADD LAPTOP FORM */}
+      <form
+        onSubmit={handleLaptopSubmit}
+        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+      >
+        {Object.keys(formData).map((key) =>
+          key !== "status" ? (
+            <div key={key} className="flex flex-col">
+              <label className="font-semibold mb-1 capitalize">{key}</label>
+              <input
+                type="text"
+                name={key}
+                value={formData[key]}
+                onChange={handleChange}
+                className="border p-2 rounded"
+              />
+            </div>
+          ) : null
+        )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Battery"
-          value={form.battery}
-          onChange={e => handleChange('battery', e.target.value)}
-        />
-        <Input
-          label="Battery Life"
-          value={form.batteryLife}
-          onChange={e => handleChange('batteryLife', e.target.value)}
-        />
-        <Input
-          label="Graphics Card"
-          value={form.graphicsCard}
-          onChange={e => handleChange('graphicsCard', e.target.value)}
-        />
-        <Input
-          label="Graphic Brand"
-          value={form.graphicBrand}
-          onChange={e => handleChange('graphicBrand', e.target.value)}
-        />
-        <Input
-          label="Manufacturer"
-          value={form.manufacturer}
-          onChange={e => handleChange('manufacturer', e.target.value)}
-        />
-        <Input
-          label="USB Ports"
-          type="number"
-          value={form.usbPorts}
-          onChange={e => handleChange('usbPorts', e.target.value)}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Weight"
-          type="number"
-          min="0.01"
-          step="0.01"
-          value={form.weight}
-          onChange={e => handleChange('weight', e.target.value)}
-          placeholder="Enter weight (kg)"
-          required
-        />
-        <div>
-          <label className="block mb-1 font-medium text-sm">Status</label>
-          <select
-            value={form.status}
-            onChange={e => handleChange('status', e.target.value)}
-            className="w-full border rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="DELETED">DELETED</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="flex gap-3 items-center">
         <button
           type="submit"
-          disabled={isLoading}
-          className="px-6 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 disabled:opacity-50"
+          disabled={addLoading}
+          className="col-span-2 bg-blue-600 text-white py-3 rounded mt-4"
         >
-          {isLoading ? 'Submitting…' : 'Add Laptop'}
+          {addLoading ? "Creating..." : "Create Laptop"}
         </button>
-        {message && <p className="text-sm text-green-600">{message}</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
-      </div>
-    </form>
-  );
-}
+      </form>
 
-function Input({ label, type = 'text', ...props }) {
-  return (
-    <div>
-      <label className="block mb-1 font-medium text-sm">{label}</label>
-      <input
-        type={type}
-        {...props}
-        className="w-full border rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      />
+      {/* MULTIPLE PHOTO UPLOAD */}
+      {createdLaptopId && (
+        <div className="mt-10 border-t pt-6">
+          <h2 className="text-xl font-bold mb-4">
+            Upload Laptop Photos (ID: {createdLaptopId})
+          </h2>
+
+          <input
+            type="file"
+            multiple
+            onChange={(e) => setPhotoFiles([...e.target.files])}
+            className="mb-4"
+          />
+
+          {/* PREVIEW */}
+          {photoFiles.length > 0 && (
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              {photoFiles.map((file, index) => (
+                <img
+                  key={index}
+                  src={URL.createObjectURL(file)}
+                  alt="preview"
+                  className="w-full h-32 object-cover rounded shadow"
+                />
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={handlePhotoUpload}
+            disabled={photoLoading}
+            className="bg-green-600 text-white py-2 px-6 rounded"
+          >
+            {photoLoading ? "Uploading..." : "Upload Photos"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

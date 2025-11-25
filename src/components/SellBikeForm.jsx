@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useAddBikeMutation } from '../store/services/sellerApi';
+import { selectSellerId } from '../store/authSlice';
 
 const initialForm = {
   bike_id: '',
@@ -14,27 +16,26 @@ const initialForm = {
   color: '',
   registrationNumber: '',
   description: '',
-  sellerId: 1,
   status: 'AVAILABLE',
 };
 
 export default function SellBikeForm() {
   const [form, setForm] = useState(initialForm);
   const [addBike, { isLoading }] = useAddBikeMutation();
+  const sellerId = useSelector(selectSellerId);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   const handleChange = (field, value) => {
     setForm(prev => ({
       ...prev,
-      [field]: [
-        'bike_id',
-        'prize',
-        'manufactureYear',
-        'engineCC',
-        'kilometersDriven',
-        'sellerId',
-      ].includes(field)
+       [field]: [
+         'bike_id',
+         'prize',
+         'manufactureYear',
+         'engineCC',
+         'kilometersDriven',
+       ].includes(field)
         ? Number(value || 0)
         : value,
     }));
@@ -45,10 +46,16 @@ export default function SellBikeForm() {
     setMessage('');
     setError('');
 
+    if (!sellerId) {
+      setError('Seller profile missing. Please login again.');
+      return;
+    }
+
     try {
       const data = await addBike({
         ...form,
         prize: Number(form.prize || 0),
+        sellerId,
       }).unwrap();
       setMessage(data?.message || 'Bike added successfully');
       setForm(initialForm);
@@ -60,6 +67,17 @@ export default function SellBikeForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <div className="p-3 bg-gray-50 rounded-md text-sm text-gray-700">
+        <p>
+          <span className="font-semibold">Seller ID:</span>{' '}
+          {sellerId ?? 'Not available'}
+        </p>
+        {!sellerId && (
+          <p className="text-red-600 mt-1">
+            You must be logged in as a seller to add bikes.
+          </p>
+        )}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
           label="Bike ID"

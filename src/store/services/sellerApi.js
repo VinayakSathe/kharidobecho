@@ -1,90 +1,115 @@
-import { baseApi } from './baseApi';
+import { baseApi } from "./baseApi";
 
 export const sellerApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     addLaptop: builder.mutation({
       query: (payload) => ({
-        url: '/api/laptops/create',
-        method: 'POST',
+        url: "/api/laptops/create",
+        method: "POST",
         body: payload,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
       }),
-      invalidatesTags: ['Laptops'],
+      invalidatesTags: ["Laptops"],
     }),
     updateLaptop: builder.mutation({
       query: ({ laptopId, body }) => ({
         url: `/api/laptops/update`,
-        method: 'PATCH',
+        method: "PATCH",
         params: { laptopId },
         body,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
       }),
-      invalidatesTags: ['Laptops'],
+      invalidatesTags: ["Laptops"],
     }),
+    // getLaptopById: builder.query({
+    //   query: (laptopId) => ({
+    //     url: "/api/laptops/getById",
+    //     params: { laptop_id: laptopId },
+    //   }),
+    //   providesTags: ["Laptops"],
+    // }),
+    // deleteLaptop: builder.mutation({
+    //   query: (laptopId) => ({
+    //     url: "/api/laptops/delete",
+    //     method: "DELETE",
+    //     params: { laptopId },
+    //     headers: { "Content-Type": "application/json" },
+    //   }),
+    //   invalidatesTags: ["Laptops"],
+    // }),
+
     getLaptopById: builder.query({
       query: (laptopId) => ({
-        url: '/api/laptops/getById',
+        url: "/api/laptops/getById",
         params: { laptop_id: laptopId },
       }),
-      providesTags: ['Laptops'],
+      providesTags: (result, error, arg) => [
+        { type: "Laptops", id: "LIST" },
+        { type: "Laptops", id: arg },
+      ],
     }),
+
     deleteLaptop: builder.mutation({
-      query: (laptopId) => ({
-        url: '/api/laptops/delete',
-        method: 'DELETE',
+      query: ({ laptopId }) => ({
+        url: "/api/laptops/delete",
+        method: "DELETE",
         params: { laptopId },
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
       }),
-      invalidatesTags: ['Laptops'],
+      invalidatesTags: (result, error, arg) => [
+        { type: "Laptops", id: "LIST" },
+        { type: "Laptops", id: arg.laptopId },
+      ],
     }),
+
 
     addBike: builder.mutation({
       query: (payload) => ({
-        url: '/bikes/post',
-        method: 'POST',
+        url: "/bikes/post",
+        method: "POST",
         body: payload,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
       }),
-      invalidatesTags: ['Bikes'],
+      invalidatesTags: ["Bikes"],
     }),
     updateBike: builder.mutation({
       query: ({ bikeId, body }) => ({
         url: `/bikes/patch/${bikeId}`,
-        method: 'PATCH',
+        method: "PATCH",
         body,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
       }),
-      invalidatesTags: ['Bikes'],
+      invalidatesTags: ["Bikes"],
     }),
     softDeleteBike: builder.mutation({
       query: (bikeId) => ({
         url: `/bikes/patch/${bikeId}/soft-delete`,
-        method: 'PATCH',
+        method: "PATCH",
       }),
-      invalidatesTags: ['Bikes'],
+      invalidatesTags: ["Bikes"],
     }),
     getBikeById: builder.query({
       query: (bikeId) => ({
         url: `/bikes/get/${bikeId}`,
       }),
-      providesTags: ['Bikes'],
+      providesTags: ["Bikes"],
     }),
     deleteBike: builder.mutation({
       query: (bikeId) => ({
         url: `/bikes/delete/${bikeId}`,
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       }),
-      invalidatesTags: ['Bikes'],
+      invalidatesTags: ["Bikes"],
     }),
 
     uploadLaptopPhoto: builder.mutation({
       query: ({ laptopId, files }) => {
         const formData = new FormData();
-        formData.append('files', files);
+        formData.append("files", files);
         return {
           url: `/api/photo/upload`,
-          method: 'POST',
+          method: "POST",
           params: { laptopid: laptopId },
           body: formData,
           formData: true,
@@ -93,46 +118,46 @@ export const sellerApi = baseApi.injectEndpoints({
           },
         };
       },
-      invalidatesTags: ['LaptopPhotos'],
+      invalidatesTags: ["LaptopPhotos"],
     }),
     deleteLaptopPhoto: builder.mutation({
       query: (photoId) => ({
         url: `/api/photo/delete`,
-        method: 'DELETE',
+        method: "DELETE",
         params: { photoId },
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
       }),
-      invalidatesTags: ['LaptopPhotos'],
+      invalidatesTags: ["LaptopPhotos"],
     }),
 
     uploadBikeImage: builder.mutation({
       query: ({ bikeId, files }) => {
         const formData = new FormData();
-        formData.append('files', files);
-        formData.append('BikeId', bikeId);
+        formData.append("files", files);
+        formData.append("BikeId", bikeId);
         return {
-          url: '/bikes/image/upload',
-          method: 'POST',
+          url: "/bikes/image/upload",
+          method: "POST",
           body: formData,
         };
       },
-      invalidatesTags: ['BikeImages'],
+      invalidatesTags: ["BikeImages"],
     }),
     getBikeImages: builder.query({
       query: (bikeId) => ({
-        url: '/bikes/image/get',
+        url: "/bikes/image/get",
         params: { bikeId },
       }),
-      providesTags: ['BikeImages'],
+      providesTags: ["BikeImages"],
     }),
     deleteBikeImage: builder.mutation({
       query: (imageId) => ({
-        url: '/bikes/image/delete',
-        method: 'DELETE',
+        url: "/bikes/image/delete",
+        method: "DELETE",
         params: { imageId },
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
       }),
-      invalidatesTags: ['BikeImages'],
+      invalidatesTags: ["BikeImages"],
     }),
   }),
   overrideExisting: false,
@@ -154,4 +179,3 @@ export const {
   useGetBikeImagesQuery,
   useDeleteBikeImageMutation,
 } = sellerApi;
-

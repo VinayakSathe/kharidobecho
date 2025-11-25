@@ -1,83 +1,159 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { useLoginMutation } from "../../store/services/authApi";
+import { useDispatch } from "react-redux";
+
+import {
+  useLoginMutation,
+  useLazyGetBuyerInfoQuery,
+  useLazyGetSellerInfoQuery,
+} from "../../store/services/authApi";
+
+import { setAuthState } from "../../store/authSlice";
 import logo from "../../assets/Images/kharidobecho-logo.svg";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [login, { isLoading }] = useLoginMutation();
-  
-  // const [formData, setFormData] = useState({ username: email, password: password });
+  const dispatch = useDispatch();
+
+  const [login, { isLoading: loginLoading }] = useLoginMutation();
+
+  // Lazy queries
+  const [getBuyerInfo] = useLazyGetBuyerInfoQuery();
+  const [getSellerInfo] = useLazyGetSellerInfoQuery();
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-  
+
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!formData.email || !formData.password) {
       toast.error("Please fill all fields");
       return;
     }
-  
+
     try {
       const payload = {
-        username: formData.email,      // backend expects "username"
+        username: formData.email,
         password: formData.password,
       };
-  
+
       const response = await login(payload).unwrap();
-  
       console.log("Login Response:", response);
-  
-      // Save token
-      if (response.accessToken) {
-        localStorage.setItem("token", response.accessToken);
-      } else if (response.token) {
-        localStorage.setItem("token", response.token);
-      } else if (response.data?.token) {
-        localStorage.setItem("token", response.data.token);
+
+      const token =
+        response.accessToken || response.token || response.data?.token || null;
+
+      if (token) {
+        localStorage.setItem("token", token);
       }
-  
-      // ✅ Get roles from response
-      const roles = response.roles || [];
-  
-      // (optional) Store roles if you want later checks
+
+      // ✅ FIX: Read roles from backend (authorities)
+      const roles =
+        response.authorities || response.roles || response.data?.roles || [];
+
+      console.log("User Roles:", roles);
+
       localStorage.setItem("roles", JSON.stringify(roles));
-  
-      toast.success("Login successful");
-  
-      // ✅ Role-wise navigation
-      if (roles.includes("ROLE_BUYER") || roles.includes("BUYER")) {
-        navigate("/");                // buyer → home page
-      } else {
-        navigate("/dashboard");       // others → dashboard
+
+      // ROLE CHECK FIX ✔
+      const isBuyer = roles.includes("BUYER");
+      const isSeller = roles.includes("SELLER");
+
+      const baseUserId = response.userId;
+
+      // ========================
+      // BUYER LOGIN FLOW
+      // ========================
+      if (isBuyer) {
+        console.log("Hitting Buyer API...");
+        const buyerData = await getBuyerInfo(baseUserId).unwrap();
+
+        if (!buyerData) {
+          toast.error("Buyer info fetch failed");
+          return;
+        }
+
+        const buyerUserId = buyerData.userId;
+        localStorage.setItem("buyerUserId", buyerUserId);
+
+        dispatch(
+          setAuthState({
+            token,
+            sellerId: null,
+            sellerProfile: {
+              roles,
+              expiresIn: response.expiresIn,
+              tokenType: response.tokenType,
+              userId: baseUserId,
+            },
+          })
+        );
+
+        toast.success("Login successful");
+        navigate("/");
+        return;
       }
+
+      // ========================
+      // SELLER LOGIN FLOW
+      // ========================
+      if (isSeller) {
+        console.log("Hitting Seller API...");
+        const sellerData = await getSellerInfo(baseUserId).unwrap();
+
+        if (!sellerData) {
+          toast.error("Seller info fetch failed");
+          return;
+        }
+
+        const sellerId = sellerData.sellerId;
+        localStorage.setItem("sellerId", sellerId);
+
+        dispatch(
+          setAuthState({
+            token,
+            sellerId,
+            sellerProfile: {
+              roles,
+              expiresIn: response.expiresIn,
+              tokenType: response.tokenType,
+              userId: baseUserId,
+            },
+          })
+        );
+
+        toast.success("Login successful");
+        navigate("/dashboard");
+        return;
+      }
+
+      // NO ROLE FOUND
+      toast.error("Unauthorized: No valid role assigned");
     } catch (err) {
       console.error("Login Error:", err);
       toast.error("Invalid credentials or server error");
     }
   };
-  
 
-  // ... rest of the component (return statement) remains the same
   return (
     <div className="min-h-screen flex">
-      {/* LEFT SIDE - LOGO */}
+      {/* LEFT LOGO SIDE */}
       <div className="hidden md:flex w-1/2 bg-white items-center justify-center">
         <img src={logo} alt="Logo" className="w-150 h-100 object-contain" />
       </div>
 
-      {/* RIGHT SIDE - LOGIN FORM */}
+      {/* RIGHT FORM SIDE */}
       <div className="w-full md:w-1/2 flex flex-col items-center px-8 py-10">
         <h1 className="text-3xl font-semibold text-center">Login</h1>
 
@@ -87,7 +163,6 @@ const Login = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="w-full max-w-sm">
-          {/* Email */}
           <label className="block text-gray-700 font-medium mb-1">
             Email address
           </label>
@@ -100,7 +175,6 @@ const Login = () => {
             className="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
-          {/* Password */}
           <div className="mt-5">
             <label className="block text-gray-700 font-medium mb-1">
               Password
@@ -115,27 +189,23 @@ const Login = () => {
             />
           </div>
 
-          {/* Forgot Password */}
           <div className="text-right mt-2">
             <button
               type="button"
               className="text-[#033047] text-sm font-semibold cursor-pointer"
-              onClick={() => {
-                navigate("/forget-password");
-              }}
+              onClick={() => navigate("/forget-password")}
             >
               Forgot Password?
             </button>
           </div>
 
-          {/* Login button */}
           <button
             id="login-btn"
             type="submit"
-            disabled={isLoading}
+            disabled={loginLoading}
             className="w-full bg-[#0A2533] text-white py-4 rounded-xl mt-8 text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? "Logging in..." : "Login"}
+            {loginLoading ? "Logging in..." : "Login"}
           </button>
         </form>
 
@@ -143,9 +213,7 @@ const Login = () => {
           Don’t have an account?{" "}
           <span
             className="text-blue-600 font-semibold cursor-pointer"
-            onClick={() => {
-              navigate("/register");
-            }}
+            onClick={() => navigate("/register")}
           >
             Sign up
           </span>

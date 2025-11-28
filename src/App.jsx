@@ -27,6 +27,10 @@ function App() {
           <Route path="/forget-password" element={<ForgetPassword />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/sellfrom" element={<SellProducts />} />
+          <Route path="/sell-laptop/:id" element={<SellProducts initialTab="laptop" />} />
+          <Route path="/sell-mobile/:id" element={<SellProducts initialTab="mobile" />} />
+          <Route path="/sell-car/:id" element={<SellProducts initialTab="car" />} />
+          <Route path="/sell-bike/:id" element={<SellProducts initialTab="bike" />} />
           <Route path="/buy/cars" element={<BuyCars />} />
           <Route path="/buy/bikes" element={<BuyBikes />} />
           <Route path="/buy/mobiles" element={<BuyMobiles />} />

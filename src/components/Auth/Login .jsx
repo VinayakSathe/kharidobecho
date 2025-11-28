@@ -3,24 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 
-import {
-  useLoginMutation,
-  useLazyGetBuyerInfoQuery,
-  useLazyGetSellerInfoQuery,
-} from "../../store/services/authApi";
-
 import { setAuthState } from "../../store/authSlice";
 import logo from "../../assets/Images/kharidobecho-logo.svg";
+import {
+  loginUser,
+  fetchBuyerInfo,
+  fetchSellerInfo,
+} from "../../store/services/authServices";
 
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const [login, { isLoading: loginLoading }] = useLoginMutation();
-
-  // Lazy queries
-  const [getBuyerInfo] = useLazyGetBuyerInfoQuery();
-  const [getSellerInfo] = useLazyGetSellerInfoQuery();
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -43,12 +38,13 @@ const Login = () => {
     }
 
     try {
+      setLoginLoading(true);
       const payload = {
         username: formData.email,
         password: formData.password,
       };
 
-      const response = await login(payload).unwrap();
+      const response = await loginUser(payload);
       console.log("Login Response:", response);
 
       const token =
@@ -71,13 +67,16 @@ const Login = () => {
       const isSeller = roles.includes("SELLER");
 
       const baseUserId = response.userId;
+      if (baseUserId) {
+        localStorage.setItem("userId", baseUserId);
+      }
 
       // ========================
       // BUYER LOGIN FLOW
       // ========================
       if (isBuyer) {
         console.log("Hitting Buyer API...");
-        const buyerData = await getBuyerInfo(baseUserId).unwrap();
+        const buyerData = await fetchBuyerInfo(baseUserId);
 
         if (!buyerData) {
           toast.error("Buyer info fetch failed");
@@ -110,7 +109,7 @@ const Login = () => {
       // ========================
       if (isSeller) {
         console.log("Hitting Seller API...");
-        const sellerData = await getSellerInfo(baseUserId).unwrap();
+        const sellerData = await fetchSellerInfo(baseUserId);
 
         if (!sellerData) {
           toast.error("Seller info fetch failed");
@@ -142,7 +141,14 @@ const Login = () => {
       toast.error("Unauthorized: No valid role assigned");
     } catch (err) {
       console.error("Login Error:", err);
-      toast.error("Invalid credentials or server error");
+      const message =
+        err?.response?.data?.message ||
+        err?.data?.message ||
+        err?.message ||
+        "Invalid credentials or server error";
+      toast.error(message);
+    } finally {
+      setLoginLoading(false);
     }
   };
 
